@@ -1,0 +1,6 @@
+cd /mnt/c/Users/anefu/Desktop/AI/DE_Zoomcamp
+
+source .venv/bin/activate
+
+/usr/bin/docker ps
+
