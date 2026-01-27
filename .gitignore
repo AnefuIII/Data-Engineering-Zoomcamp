@@ -1,1 +1,18 @@
+# Local credentials
+keys/
+01-terraform-basics/keys/
+**/keys/
+*.json
+
+# Terraform specific
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+*.tfvars
+*.tfvars.json
+
+# Other
+.venv/
 vids/
+steps.txt
