@@ -1,0 +1,73 @@
+services:
+  pgdatabase:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=ny_taxi
+    volumes:
+      - ny_taxi_postgres_data:/var/lib/postgresql/data:rw
+    ports:
+      - "5433:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=root
+    ports:
+      - "8081:80"
+
+  kestra_db:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=kestra
+      - POSTGRES_PASSWORD=kestra
+      - POSTGRES_DB=kestra
+    volumes:
+      - kestra_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kestra"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  kestra:
+    image: kestra/kestra:v1.1
+    user: "root"
+    command: server standalone
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - kestra_internal_data:/app/storage
+    environment:
+      KESTRA_CONFIGURATION: |
+        kestra:
+          storage:
+            type: local
+            local:
+              base-path: /app/storage
+          repository:
+            type: postgres
+          queue:
+            type: postgres
+        datasources:
+          postgres:
+            url: jdbc:postgresql://kestra_db:5432/kestra
+            driverClassName: org.postgresql.Driver
+            username: kestra
+            password: kestra
+          default:
+            url: jdbc:postgresql://kestra_db:5432/kestra
+            driverClassName: org.postgresql.Driver
+            username: kestra
+            password: kestra
+    ports:
+      - "8080:8080"
+    depends_on:
+      kestra_db:
+        condition: service_healthy
+
+volumes:
+  ny_taxi_postgres_data:
+  kestra_postgres_data:
+  kestra_internal_data:

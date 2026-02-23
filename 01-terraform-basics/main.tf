@@ -37,3 +37,10 @@ resource "google_storage_bucket" "auto_expiring_bucket" {
     }
   }
 }
+
+resource "google_bigquery_dataset" "taxi_dataset" {
+  dataset_id = "trips_data_all"
+  project    = "vendor-finder-app"
+  location   = "EUROPE-WEST3"
+  delete_contents_on_destroy  = true
+}

@@ -4,6 +4,8 @@ keys/
 **/keys/
 *.json
 
+02-workflow-orchestration/gcp_taxi.yaml
+
 # Terraform specific
 .terraform/
 *.tfstate
