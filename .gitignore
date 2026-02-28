@@ -18,3 +18,5 @@ keys/
 .venv/
 vids/
 steps.txt
+.bruin.yml
+logs/runs
