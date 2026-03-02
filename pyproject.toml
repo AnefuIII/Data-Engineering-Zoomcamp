@@ -5,8 +5,11 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "dlt[duckdb,rest-api,workspace]>=1.22.2",
+    "duckdb>=1.4.4",
     "pandas>=3.0.0",
     "psycopg2-binary>=2.9.11",
     "pyarrow>=23.0.0",
     "sqlalchemy>=2.0.46",
+    "tqdm>=4.67.3",
 ]

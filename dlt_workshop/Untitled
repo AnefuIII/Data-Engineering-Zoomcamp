@@ -1,0 +1,67 @@
+import dlt
+from dlt.sources.rest_api import rest_api_source
+import traceback
+
+def load_data():
+    try:
+        # API configuration
+        config = {
+            "client": {"base_url": "https://us-central1-dlthub-analytics.cloudfunctions.net/"},
+            "resources": [{
+                "name": "taxi_trips",
+                "endpoint": {
+                    "path": "data_engineering_zoomcamp_api",
+                    "paginator": {
+                        "type": "offset",
+                        "limit": 1000,
+                        "offset_param": "offset"
+                    }
+                }
+            }]
+        }
+
+        print("1️⃣ Creating source...")
+        source = rest_api_source(config)
+        print("✅ Source created")
+
+        print("2️⃣ Initializing pipeline...")
+        pipeline = dlt.pipeline(
+            pipeline_name="taxi_pipeline",
+            destination="duckdb",
+            dataset_name="taxi_data"
+        )
+        print(f"✅ Pipeline initialized")
+        print(f"   Pipelines dir: {pipeline.pipelines_dir}")
+        
+        # Check what data we're getting
+        print("3️⃣ Extracting data from API...")
+        # Let's try to peek at the data first
+        for resource in source.resources:
+            print(f"   Resource: {resource.name}")
+            data = list(resource)[:2]  # Get first 2 items
+            print(f"   Sample data: {data}")
+        
+        print("4️⃣ Running pipeline...")
+        load_info = pipeline.run(source, table_name="taxi_trips", write_disposition="replace")
+        
+        print("✅ PIPELINE FINISHED!")
+        print(f"Load info: {load_info}")
+        
+        # Check if data was actually loaded
+        print("\n5️⃣ Verifying data in database...")
+        with pipeline.sql_client() as client:
+            # List all tables
+            tables = client.execute_sql("SHOW TABLES")
+            print(f"Tables in database: {tables}")
+            
+            # Try to query the data
+            if tables:
+                result = client.execute_sql("SELECT COUNT(*) FROM taxi_trips")
+                print(f"Row count: {result}")
+                
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        traceback.print_exc()
+
+if __name__ == "__main__":
+    load_data()
