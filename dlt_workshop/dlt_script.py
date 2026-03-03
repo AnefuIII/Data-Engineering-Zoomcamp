@@ -1,119 +1,77 @@
 import dlt
-import os
-from dlt.sources.rest_api import rest_api_source
+import requests
+from pathlib import Path
 
-def load_data():
-    # Get absolute path for the current directory
-    current_dir = os.path.abspath(".")
-    db_path = os.path.join(current_dir, "taxi_data.duckdb")
+@dlt.resource(write_disposition="replace") # Use 'replace' for your first clean run
+def nyc_taxi_data():
+    url = "https://us-central1-dlthub-analytics.cloudfunctions.net/data_engineering_zoomcamp_api"
+    page = 1
     
-    print(f"Current directory: {current_dir}")
-    print(f"Database will be created at: {db_path}")
-    
-    # API configuration
-    config = {
-        "client": {"base_url": "https://us-central1-dlthub-analytics.cloudfunctions.net/"},
-        "resources": [{
-            "name": "taxi_trips",
-            "endpoint": {
-                "path": "data_engineering_zoomcamp_api",
-                "paginator": {
-                    "type": "offset",
-                    "limit": 1000,
-                    "offset_param": "offset"
-                }
-            }
-        }]
-    }
-
-    # Initialize the source
-    source = rest_api_source(config)
-
-    # Initialize the pipeline with explicit path
-    pipeline = dlt.pipeline(
-        pipeline_name="taxi_pipeline",
-        destination=dlt.destinations.duckdb(db_path),
-        dataset_name="taxi_data"
-    )
-
-    print("🚀 PIPELINE STARTED: Fetching and saving data...")
-    
-    # Run the pipeline
-    load_info = pipeline.run(source, table_name="taxi_trips", write_disposition="replace")
-    
-    print("✅ PIPELINE FINISHED!")
-    print(f"Load info: {load_info}")
-    
-    # Verify the database was created
-    if os.path.exists(db_path):
-        print(f"✅ Database file created: {db_path}")
-        print(f"File size: {os.path.getsize(db_path)} bytes")
+    while True:
+        # Construct the URL with pagination parameters
+        # Most APIs use ?page=X or &offset=X
+        params = {'page': page}
+        response = requests.get(url, params=params)
+        response.raise_for_status() # Stop if the API is down
         
-        # Try to connect and verify data
-        try:
-            import duckdb
-            conn = duckdb.connect(db_path)
-            tables = conn.execute("SHOW TABLES").fetchall()
-            print(f"Tables in database: {tables}")
+        data = response.json()
+        
+        # STOP CONDITION: If the page is empty, we are done
+        if not data:
+            break
             
-            if tables:
-                count = conn.execute("SELECT COUNT(*) FROM taxi_trips").fetchone()[0]
-                print(f"Rows in taxi_trips: {count}")
-        except Exception as e:
-            print(f"Error verifying database: {e}")
-    else:
-        print("❌ Database file was NOT created!")
+        yield data
+        
+        print(f"Fetched page {page}...")
+        page += 1
 
 if __name__ == "__main__":
-    load_data()
+    # Setup paths in WSL home
+    working_dir = Path(__file__).parent
+    db_path = working_dir / "data" / "nyc_taxi_api.duckdb"
 
+    # Define the pipeline
+    pipeline = dlt.pipeline(
+        pipeline_name="nyc_taxi_pipeline",
+        destination=dlt.destinations.duckdb(str(db_path)),
+        dataset_name="taxi_api_data",
+    )
 
+    # Run the pipeline
+    load_info = pipeline.run(nyc_taxi_data(), table_name="rides")
 
+    print(load_info)
+
+    
+############3 working for csv
+
+# from pathlib import Path 
 # import dlt
-# from dlt.sources.rest_api import rest_api_source
+# import os
+# import pandas as pd
 
-# def load_data():
-#     # API configuration
-#     config = {
-#         "client": {"base_url": "https://us-central1-dlthub-analytics.cloudfunctions.net/"},
-#         "resources": [{
-#             "name": "taxi_trips",
-#             "endpoint": {
-#                 "path": "data_engineering_zoomcamp_api",
-#                 "paginator": {
-#                     "type": "offset",
-#                     "limit": 1000,
-#                     "offset_param": "offset"
-#                 }
-#             }
-#         }]
-#     }
-
-#     # Initialize the source
-#     source = rest_api_source(config)
-
-#     # Initialize the pipeline
-#     pipeline = dlt.pipeline(
-#         pipeline_name="taxi_pipeline",
-#         destination="duckdb",
-#         dataset_name="taxi_data"
-#     )
-
-#     print("🚀 PIPELINE STARTED: Fetching and saving data...")
-#     print(f"Pipeline will save to: {pipeline.pipelines_dir}")
-    
-#     # Run the pipeline
-#     load_info = pipeline.run(source, table_name="taxi_trips", write_disposition="replace")
-    
-#     print("✅ PIPELINE FINISHED!")
-#     print(f"Load info: {load_info}")
-    
-#     # Show where the database is
-#     import os
-#     import glob
-#     duckdb_files = glob.glob(os.path.expanduser("~/.dlt/pipelines/**/*.duckdb"), recursive=True)
-#     if duckdb_files:
-#         print(f"\n📁 Database file location: {duckdb_files[0]}")
+# @dlt.resource(write_disposition="append")
+# def load_resource(file_path: str, **kwargs):
+#     # It's safer to check if the file exists first
+#     df = pd.read_csv(file_path)
+#     yield df
 
 # if __name__ == "__main__":
-#     load_data()
+#     # Get the directory where THIS script is located
+#     working_dir = Path(__file__).parent
+    
+#     # Define paths using pathlib (cleaner than os.chdir)
+#     path = working_dir / "data" / "data.csv"
+#     db_path = working_dir / "data" / "yellow_taxi_database.duckdb"
+
+#     data = load_resource(path)
+
+#     pipeline = dlt.pipeline(
+#         pipeline_name="my_pipeline",
+#         destination=dlt.destinations.duckdb(str(db_path)), # dlt likes strings for paths
+#         dataset_name="yellow_taxi_data",
+#     )
+
+#     load_info = pipeline.run(data, table_name="yellow_taxi_table")
+
+#     print(load_info)
