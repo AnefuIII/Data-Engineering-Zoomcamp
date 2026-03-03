@@ -20,3 +20,7 @@ vids/
 steps.txt
 .bruin.yml
 logs/runs
+
+# DLT Workshop
+dlt_workshop/data/duckdb
+dlt_workshop/data/duckdb_cli-linux-amd64.zip
